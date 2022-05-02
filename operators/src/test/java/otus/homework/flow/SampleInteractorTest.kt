@@ -93,6 +93,22 @@ class SampleInteractorTest {
     fun `test task4`() = runBlockingTest {
         every { dotsRepository.produceNumbers() } returns flow {
             (1..10).forEach {
+                emit(it)
+            }
+        }
+
+        val expected = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+        val actual = dotsInteractor.task4().toList()
+
+        assertEquals(actual, expected)
+
+        verify(exactly = 1) { dotsRepository.completed() }
+    }
+
+    @Test
+    fun `test task4 with exception`() = runBlockingTest {
+        every { dotsRepository.produceNumbers() } returns flow {
+            (1..10).forEach {
                 if (it == 5) {
                     throw IllegalArgumentException("Failed")
                 } else {
