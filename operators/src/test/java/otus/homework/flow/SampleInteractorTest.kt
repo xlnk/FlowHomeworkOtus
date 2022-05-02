@@ -27,7 +27,7 @@ class SampleInteractorTest {
         val expected = listOf("35 won", "55 won", "25 won")
         val actual = dotsInteractor.task1().toList()
 
-        assertEquals(actual, expected)
+        assertEquals(expected, actual)
     }
 
     @Test
@@ -69,7 +69,7 @@ class SampleInteractorTest {
         )
         val actual = dotsInteractor.task2().toList()
 
-        assertEquals(actual, expected)
+        assertEquals(expected, actual)
     }
 
     @Test
@@ -86,11 +86,27 @@ class SampleInteractorTest {
         val expected = listOf("Red" to "Circle", "Green" to "Square", "Blue" to "Triangle")
         val actual = dotsInteractor.task3().toList()
 
-        assertEquals(actual, expected)
+        assertEquals(expected, actual)
     }
 
     @Test
     fun `test task4`() = runBlockingTest {
+        every { dotsRepository.produceNumbers() } returns flow {
+            (1..10).forEach {
+                emit(it)
+            }
+        }
+
+        val expected = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+        val actual = dotsInteractor.task4().toList()
+
+        assertEquals(expected, actual)
+
+        verify(exactly = 1) { dotsRepository.completed() }
+    }
+
+    @Test
+    fun `test task4 with exception`() = runBlockingTest {
         every { dotsRepository.produceNumbers() } returns flow {
             (1..10).forEach {
                 if (it == 5) {
@@ -104,7 +120,7 @@ class SampleInteractorTest {
         val expected = listOf(1, 2, 3, 4, -1)
         val actual = dotsInteractor.task4().toList()
 
-        assertEquals(actual, expected)
+        assertEquals(expected, actual)
 
         verify(exactly = 1) { dotsRepository.completed() }
     }
