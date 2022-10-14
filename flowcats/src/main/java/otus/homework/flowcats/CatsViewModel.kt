@@ -5,21 +5,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import otus.homework.flowcats.Result
 
 class CatsViewModel(
     private val catsRepository: CatsRepository
 ) : ViewModel() {
 
-    private val _catsLiveData = MutableLiveData<Fact>()
-    val catsLiveData: LiveData<Fact> = _catsLiveData
+    private val _catsLiveData = MutableLiveData<Result<Fact>>()
+    val catsLiveData: LiveData<Result<Fact>> = _catsLiveData
 
     init {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
+//            withContext(Dispatchers.IO) {
                 catsRepository.listenForCatFacts().collect {
                     _catsLiveData.value = it
                 }
-            }
+//            }
         }
     }
 }
