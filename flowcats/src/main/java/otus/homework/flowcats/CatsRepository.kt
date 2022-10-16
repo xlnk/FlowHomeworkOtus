@@ -14,22 +14,14 @@ class CatsRepository(
     private val refreshIntervalMs: Long = 30000
 ) {
 
-    fun listenForCatFacts(): Flow<Result<Fact>> = flow {
+    fun listenForCatFacts(): Flow<Result<Fact>> = flow<Result<Fact>> {
         while (true) {
             emit(Result.Loading)
             try {
-                val latestNews: Fact = try {
-                    if (true) throw RuntimeException("ignore main server")
-                    catsService.getCatFact()
-                } catch (ex: Exception) {
-                    if (ex !is SocketTimeoutException) {
-                        throw ex
-                    }
-                    Log.d(TAG, "Main server isn't response, try other server. Message: " + ex.message, ex)
-                    catsService.getCatFactReserve().toFact()
-                }
+                if (true) throw RuntimeException("Test")
+                val fact = loadCatFact()
                 Log.d(TAG, "Network response received: ${System.currentTimeMillis()}")
-                emit(Result.Success(latestNews))
+                emit(Result.Success(fact))
             } catch (clean: CancellationException) {
                 throw clean
             } catch (ex: Exception) {
@@ -37,6 +29,18 @@ class CatsRepository(
                 emit(Result.Error(ex))
             }
             delay(refreshIntervalMs)
+        }
+    }
+
+    private suspend fun loadCatFact(): Fact {
+        return try {
+            catsService.getCatFact()
+        } catch (ex: Exception) {
+            if (ex !is SocketTimeoutException) {
+                throw ex
+            }
+            Log.d(TAG, "Main server isn't response, try other server. Message: " + ex.message, ex)
+            catsService.getCatFactReserve().toFact()
         }
     }
 }
