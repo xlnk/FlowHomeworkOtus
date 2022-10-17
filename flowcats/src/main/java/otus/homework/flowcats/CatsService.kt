@@ -6,4 +6,7 @@ interface CatsService {
 
     @GET("random?animal_type=cat")
     suspend fun getCatFact(): Fact
+
+    @GET("https://catfact.ninja/fact")
+    suspend fun getCatFactReserve(): FactReserve
 }

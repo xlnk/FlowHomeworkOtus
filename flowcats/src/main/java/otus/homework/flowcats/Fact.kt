@@ -21,4 +21,8 @@ data class Fact(
 	val user: String,
 	@field:SerializedName("updatedAt")
 	val updatedAt: String
-)
+) {
+	companion object {
+		val EMPTY = Fact("", false, "", "", "", false, "", "", "")
+	}
+}
