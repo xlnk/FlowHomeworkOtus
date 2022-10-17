@@ -37,22 +37,9 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 try {
-                    // cancellable stateIn() variant
-                    catsViewModel.subscribeCatsFlow(this).collect { updateUi(it) }
-                } catch (cancel: CancellationException) {
-                    Log.d(TAG, "subscribeCatsFlow was cancelled")
-                    throw cancel
-                }
-            }
-        }
-
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                try {
-                    // simple MutableStateFlow.collect() variant
                     catsViewModel.catsFlow.collect { updateUi(it) }
                 } catch (cancel: CancellationException) {
-                    Log.d(TAG, "Simple MutableStateFlow.collect() was cancelled")
+                    Log.d(TAG, "StateFlow collector was cancelled")
                     throw cancel
                 }
             }
