@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 //import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.collect
@@ -21,53 +23,62 @@ class MainActivity : AppCompatActivity() {
     private val diContainer = DiContainer()
     private val catsViewModel by viewModels<CatsViewModel> { CatsViewModelFactory(diContainer.repository) }
 
-    private var uiJob: Job? = null
     private lateinit var loadingIndicator: ProgressBar
+    private lateinit var catsView: CatsView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val view = layoutInflater.inflate(R.layout.activity_main, null) as CatsView
-        setContentView(view)
+        catsView = layoutInflater.inflate(R.layout.activity_main, null) as CatsView
+        setContentView(catsView)
         loadingIndicator = findViewById(R.id.loading_indicator)
 
-//        catsViewModel.catsLiveData.observe(this){
-//            loadingIndicator.visibility = if (it is Result.Loading) View.VISIBLE else View.GONE
-//            when(it) {
-//                is Result.Success -> view.populate(it.data)
-//                is Result.Loading -> Unit
-//                is Result.Error -> Toast.makeText(this, it.getMessage(this), Toast.LENGTH_LONG).show()
-//            }
-//        }
+//        catsViewModel.catsLiveData.observe(this) { updateUi(it) } // LiveData variant
 
-        uiJob = lifecycleScope.launchWhenStarted {
-            catsViewModel.catsFlow.collect {
-                loadingIndicator.visibility = if (it is Result.Loading) View.VISIBLE else View.GONE
-                when(it) {
-                    is Result.Success -> view.populate(it.data)
-                    is Result.Loading -> Unit
-                    is Result.Error -> Toast.makeText(
-                        this@MainActivity,
-                        it.getMessage(this@MainActivity),
-                        Toast.LENGTH_LONG
-                    ).show()
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                try {
+                    // cancellable stateIn() variant
+                    catsViewModel.subscribeCatsFlow(this).collect { updateUi(it) }
+                } catch (cancel: CancellationException) {
+                    Log.d(TAG, "subscribeCatsFlow was cancelled")
+                    throw cancel
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                try {
+                    // simple MutableStateFlow.collect() variant
+                    catsViewModel.catsFlow.collect { updateUi(it) }
+                } catch (cancel: CancellationException) {
+                    Log.d(TAG, "Simple MutableStateFlow.collect() was cancelled")
+                    throw cancel
                 }
             }
         }
     }
 
-    private fun stopUiJob() {
-        Log.d(TAG, "attempt to stop ui")
-        uiJob?.cancel()
-        uiJob = null
+    private fun updateUi(fact: Result<Fact>) {
+        loadingIndicator.visibility = if (fact is Result.Loading) View.VISIBLE else View.GONE
+        when(fact) {
+            is Result.Success -> catsView.populate(fact.data)
+            is Result.Loading -> Unit
+            is Result.Error -> Toast.makeText(
+                this,
+                fact.getMessage(this),
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     override fun onStop() {
         super.onStop()
-        stopUiJob()
+        Log.d(TAG, "onStop")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        stopUiJob()
+        Log.d(TAG, "onDestroy")
     }
 }

@@ -36,7 +36,7 @@ class CatsRepository(
         return try {
             catsService.getCatFact()
         } catch (ex: SocketTimeoutException) {
-            Log.d(TAG, "Main server isn't response, try other server. Message: ${ex.message}", ex)
+            Log.d(TAG, "Main server isn't response, try other server. Error: $ex")
             catsService.getCatFactReserve().toFact()
         }
     }
