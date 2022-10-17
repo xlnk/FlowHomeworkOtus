@@ -22,23 +22,18 @@ class CatsViewModel(
     private val catsRepository: CatsRepository
 ) : ViewModel() {
 
-    private val selfUpdatingCatsFactFlow by lazy { catsRepository.listenForCatFacts().flowOn(Dispatchers.IO) }
-
     private val _catsLiveData = MutableLiveData<Result<Fact>>()
     val catsLiveData: LiveData<Result<Fact>> = _catsLiveData
 
-    private val _catsFlow = MutableStateFlow<Result<Fact>>(Result.Loading)
-    val catsFlow: StateFlow<Result<Fact>> = _catsFlow.asStateFlow()
-
-    fun subscribeCatsFlow(scope: CoroutineScope): StateFlow<Result<Fact>> = selfUpdatingCatsFactFlow
-        .stateIn(scope, SharingStarted.WhileSubscribed(), Result.Loading)
+    val catsFlow: StateFlow<Result<Fact>> = catsRepository
+        .listenForCatFacts()
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), Result.Loading)
 
     init {
-//        // uncomment for MutableStateFlow variant
 //        viewModelScope.launch {
-//            selfUpdatingCatsFactFlow.collect {
+//            catsFlow.collect {
 //                _catsLiveData.value = it
-//                _catsFlow.value = it
 //            }
 //        }
     }
