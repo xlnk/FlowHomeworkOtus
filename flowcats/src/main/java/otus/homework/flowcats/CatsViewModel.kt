@@ -3,8 +3,12 @@ package otus.homework.flowcats
 import androidx.lifecycle.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import otus.homework.flowcats.Result
@@ -16,17 +20,13 @@ class CatsViewModel(
     private val _catsLiveData = MutableLiveData<Result<Fact>>()
     val catsLiveData: LiveData<Result<Fact>> = _catsLiveData
 
-    private val _catsFlow = MutableStateFlow<Result<Fact>?>(null)
-    val catsFlow: StateFlow<Result<Fact>?> get() = _catsFlow
+    lateinit var catsFlow: StateFlow<Result<Fact>>
 
     init {
         viewModelScope.launch {
-//            withContext(Dispatchers.IO) {
-                catsRepository.listenForCatFacts().collect {
-                    _catsLiveData.value = it
-                    _catsFlow.emit(it)
-                }
-//            }
+            catsFlow = catsRepository.listenForCatFacts().flowOn(Dispatchers.IO).onEach {
+                _catsLiveData.value = it
+            }.stateIn(viewModelScope, SharingStarted.Eagerly, Result.Loading)
         }
     }
 }

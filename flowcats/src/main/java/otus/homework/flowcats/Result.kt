@@ -21,8 +21,7 @@ sealed class Result<out T> {
         )
 
         fun getMessage(context: Context): CharSequence = when {
-            throwable != null -> throwable.message?.takeIf { it.isNotEmpty() }
-                ?: throwable.toString()
+            throwable != null -> (throwable.message ?: "").ifEmpty { throwable.toString() }
             _messageId == 0 -> ""
             formatArgs.isEmpty() -> context.getText(_messageId)
             else -> context.getString(_messageId, *formatArgs.toTypedArray())
