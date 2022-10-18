@@ -6,7 +6,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.retryWhen
+import java.io.IOException
 import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.text.DateFormat
 
 private const val TAG = "CatsRepository"
@@ -23,20 +26,37 @@ class CatsRepository(
 
             try {
                 val fact = loadCatFact()
-                Log.d(TAG, "Network response received: ${timeFormat.format(System.currentTimeMillis())}")
+                Log.d(
+                    TAG,
+                    "Network response received: ${timeFormat.format(System.currentTimeMillis())}"
+                )
                 emit(Result.Success(fact))
             } catch (cancel: CancellationException) {
                 Log.d(TAG, "listenForCatFacts flow was cancelled")
                 throw cancel
-//            } catch (ex: Exception) { // насколько я поняла документацию try/catch внутри Flow нарушает Exception transparency, хотя и работает. Но очень не уверена что правильно её поняла
-//                Log.d(TAG, "An exception occurred while processing a network request: $ex", ex)
-//                emit(Result.Error(ex))
             }
             delay(refreshIntervalMs)
         }
-    }.catch { emit(Result.Error(it)) }
+    }.retryWhen { cause, attempt ->
+        val needRetry: Boolean = when (cause) {
+            is SocketTimeoutException,
+            is UnknownHostException,
+            is IOException -> attempt <= 10
+            else -> false
+        }
+        Log.d(TAG, "RetryWhen operator was triggered. Need retry: $needRetry, exception: $cause")
+        if (needRetry) {
+            emit(Result.Error(cause))
+            val retryTimeout = refreshIntervalMs * (attempt + 1)
+            Log.d(TAG, "Network exception. Retry after: $retryTimeout ms")
+            delay(retryTimeout)
+        }
+        needRetry
+    }.catch {
+        Log.d(TAG, "Flow catch operator was triggered. Exception: $it")
+        emit(Result.Error(it))
+    }
 
-    /** вынести в отдельную функцию чтобы не "нарушать" exception transparency */
     private suspend fun loadCatFact(): Fact {
         return try {
             catsService.getCatFact()
